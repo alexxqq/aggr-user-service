@@ -54,7 +54,7 @@ jobs:
         DATABASE_URL: postgresql+asyncpg://user_service:password@localhost:5432/user_service_db
         LOG_LEVEL: INFO
       run: |
-        $HOME/.local/bin/uv pip install pytest pytest-asyncio httpx
+        $HOME/.local/bin/uv pip install --system pytest pytest-asyncio httpx
         pytest tests/ -v --tb=short 2>&1 | tee test-results.log || true
 
     - name: Upload test logs
