@@ -1,0 +1,27 @@
+# Environment — never commit real values
+.env
+.env.local
+.env.*.local
+
+# Firebase / Google Cloud service account keys (private keys)
+**/*firebase-adminsdk*.json
+**/*service-account*.json
+google-credentials.json
+*-credentials.json
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
