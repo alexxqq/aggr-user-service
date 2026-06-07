@@ -19,7 +19,12 @@ COPY . .
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8002
 
 ENV PYTHONUNBUFFERED=1
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+
+# Copy and make entrypoint executable
+COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
