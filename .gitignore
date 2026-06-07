@@ -1,27 +1,52 @@
-# Environment — never commit real values
+# Environment variables
 .env
 .env.local
 .env.*.local
 
-# Firebase / Google Cloud service account keys (private keys)
-**/*firebase-adminsdk*.json
-**/*service-account*.json
-google-credentials.json
-*-credentials.json
-
 # Python
-.venv/
-venv/
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
 .pytest_cache/
-.mypy_cache/
 .coverage
 htmlcov/
 
-# IDE / OS
-.idea/
-.vscode/
-*.swp
-.DS_Store
+# Build
+*.dist-info/
+site-packages/
+
+# Alembic
+versions/__pycache__/
