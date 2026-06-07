@@ -1,0 +1,95 @@
+name: Deploy to ECS Fargate
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_run:
+    workflows: [ "Build and Push to ECR" ]
+    types: [ completed ]
+    branches: [ main, master ]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_NAME }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE_NAME }}
+  ECR_REPOSITORY: aggr-user-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Get current task definition
+      id: current-task-def
+      run: |
+        TASK_DEFINITION=$(aws ecs describe-services \
+          --cluster $ECS_CLUSTER \
+          --services $ECS_SERVICE \
+          --region $AWS_REGION \
+          --query 'services[0].taskDefinition' \
+          --output text)
+        echo "TASK_DEFINITION=$TASK_DEFINITION" >> $GITHUB_OUTPUT
+        echo "Retrieved task definition: $TASK_DEFINITION"
+
+    - name: Download current task definition
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition ${{ steps.current-task-def.outputs.TASK_DEFINITION }} \
+          --region $AWS_REGION \
+          --query 'taskDefinition' > task-definition.json
+
+    - name: Update task definition with new image
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: user-service
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+    - name: Deploy to ECS Fargate
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+        wait-for-service-stability-max-attempts: 10
+        wait-for-service-stability-delay-seconds: 10
+
+    - name: Verify deployment
+      run: |
+        echo "Deployment to ECS Fargate initiated"
+        echo "Service: $ECS_SERVICE"
+        echo "Cluster: $ECS_CLUSTER"
+        echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "✓ Successfully deployed user-service to ECS Fargate"
+        echo "Cluster: ${{ env.ECS_CLUSTER }}"
+        echo "Service: ${{ env.ECS_SERVICE }}"
+        echo "Image tag: ${{ github.sha }}"
+
+    - name: Notify deployment failure
+      if: failure()
+      run: |
+        echo "✗ Deployment to ECS Fargate failed"
+        exit 1
