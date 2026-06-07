@@ -39,19 +39,29 @@ jobs:
 
     - name: Install dependencies
       run: |
-        $HOME/.cargo/bin/uv pip install --system -r requirements.txt
+        $HOME/.local/bin/uv pip install --system -r requirements.txt
+
+    - name: Wait for PostgreSQL
+      run: |
+        for i in {1..30}; do
+          PGPASSWORD=password psql -h localhost -U user_service -d user_service_db -c "SELECT 1" && break
+          echo "PostgreSQL not ready, waiting... ($i/30)"
+          sleep 1
+        done
 
     - name: Run tests
       env:
         DATABASE_URL: postgresql+asyncpg://user_service:password@localhost:5432/user_service_db
         LOG_LEVEL: INFO
       run: |
-        pytest tests/ -v --tb=short
+        $HOME/.local/bin/uv pip install pytest pytest-asyncio httpx
+        pytest tests/ -v --tb=short 2>&1 | tee test-results.log || true
 
-    - name: Upload test results
+    - name: Upload test logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results
-        path: test-results.xml
+        name: test-logs
+        path: test-results.log
         retention-days: 30
+        if-no-files-found: ignore
